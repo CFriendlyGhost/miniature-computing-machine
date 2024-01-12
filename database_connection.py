@@ -1,6 +1,8 @@
 import sqlite3
 
-from engineio import json
+from flask import Flask, json, request
+
+app = Flask(__name__)
 
 
 def create_database():
@@ -39,35 +41,38 @@ def insert_test_records():
     connection.close()
 
 
+@app.route('/bank/data', methods=['GET'])
 def extract_records():
-    connection = sqlite3.connect("bank.db")
-    cursor = connection.cursor()
+    if request.method == 'GET':
+        connection = sqlite3.connect("bank.db")
+        cursor = connection.cursor()
 
-    cursor.execute("SELECT * FROM accounts")
-    accounts_records = cursor.fetchall()
+        cursor.execute("SELECT * FROM accounts")
+        accounts_records = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM transactions")
-    transactions_records = cursor.fetchall()
+        cursor.execute("SELECT * FROM transactions")
+        transactions_records = cursor.fetchall()
 
-    connection.close()
+        connection.close()
 
-    accounts = [
-        {"idKonta": record[0], "bilans": record[1]} for record in accounts_records
-    ]
-    transactions = [
-        {
-            "idTransakcji": record[0],
-            "idKonta": record[1],
-            "czyWplata": bool(record[2]),
-            "stanKonta": record[3],
-        }
-        for record in transactions_records
-    ]
+        accounts = [
+            {"idKonta": record[0], "bilans": record[1]} for record in accounts_records
+        ]
+        transactions = [
+            {
+                "idTransakcji": record[0],
+                "idKonta": record[1],
+                "czyWplata": bool(record[2]),
+                "stanKonta": record[3],
+            }
+            for record in transactions_records
+        ]
 
-    return json.dumps({"accounts": accounts, "transactions": transactions})
+        return json.dumps({"accounts": accounts, "transactions": transactions})
 
 
 if __name__ == "__main__":
-    create_database()
-    insert_test_records()
-    print(json.loads(extract_records()))
+    # create_database()
+    # insert_test_records()
+    app.run(debug=True)
+
