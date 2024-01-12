@@ -1,6 +1,6 @@
 import sqlite3
 
-from flask import Flask, json, request
+from flask import Flask, json, request, jsonify
 
 app = Flask(__name__)
 
@@ -77,7 +77,10 @@ def extract_records(accountId):
             for record in transactions_records
         ]
 
-        return json.dumps({"account": account_dict, "transactions": transactions})
+        response = jsonify({"account": account_dict, "transactions": transactions})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        # return json.dumps({"account": account_dict, "transactions": transactions})
+        return response
 
 
 if __name__ == "__main__":
