@@ -8,21 +8,20 @@ app = Flask(__name__)
 def create_database():
     connection = sqlite3.connect("bank.db")
     cursor = connection.cursor()
-    cursor.execute("DROP TABLE transactions")
-    cursor.execute("DROP TABLE accounts")
     cursor.execute(
         """ CREATE TABLE transactions (
-                    transaction_id INTEGER primary key,
-                    account_id INTEGER,
+                    transactionId INTEGER primary key,
+                    accountId INTEGER,
                     isDeposit INTEGER,
                     amount REAL,
-                    FOREIGN KEY(account_id) REFERENCES accounts(account_id)
+                    isSuccessful INTEGER,
+                    FOREIGN KEY(accountId) REFERENCES accounts(accountId)
                     )"""
     )
 
     cursor.execute(
         """CREATE TABLE accounts (
-                    account_id INTEGER primary key,
+                    accountId INTEGER primary key,
                     balance REAL
                     )"""
     )
@@ -36,12 +35,12 @@ def insert_test_records():
 
     cursor.execute("INSERT INTO accounts VALUES(0, 1000)")
     cursor.execute("INSERT INTO accounts VALUES (1, 1000)")
-    cursor.execute("INSERT INTO transactions VALUES (0, 0, 1, 1000)")
-    cursor.execute("INSERT INTO transactions VALUES (1, 0, 1, 2000)")
-    cursor.execute("INSERT INTO transactions VALUES (2, 0, 1, 2300)")
-    cursor.execute("UPDATE accounts SET balance = 6300 WHERE account_id == 0")
-    cursor.execute("INSERT INTO transactions VALUES (3, 1, 1, 1111)")
-    cursor.execute("UPDATE accounts SET balance = 2111 WHERE account_id == 1")
+    cursor.execute("INSERT INTO transactions VALUES (0, 0, 1, 1000, 1)")
+    cursor.execute("INSERT INTO transactions VALUES (1, 0, 1, 2000, 1)")
+    cursor.execute("INSERT INTO transactions VALUES (2, 0, 1, 2300, 1)")
+    cursor.execute("UPDATE accounts SET balance = 6300 WHERE accountId == 0")
+    cursor.execute("INSERT INTO transactions VALUES (3, 1, 1, 1111, 1)")
+    cursor.execute("UPDATE accounts SET balance = 2111 WHERE accountId == 1")
 
     connection.commit()
     connection.close()
@@ -55,57 +54,62 @@ def create_new_account(account_id):
     connection.close()
 
 
-def update_database(account_id, isDeposit, amount):
+def update_database(account_id, is_deposit, amount):
     connection = sqlite3.connect("bank.db")
     cursor = connection.cursor()
     is_transaction_successful = False
 
-    cursor.execute("SELECT * FROM accounts WHERE account_id == ?", (account_id,))
+    cursor.execute("SELECT * FROM accounts WHERE accountId == ?", (account_id,))
     is_account_active = len(cursor.fetchall()) > 0
 
     if not is_account_active:
         create_new_account(account_id)
 
-    if isDeposit:
+    if is_deposit:
         cursor.execute(
-            "UPDATE accounts SET balance = balance + ? WHERE account_id == ?",
+            "UPDATE accounts SET balance = balance + ? WHERE accountId == ?",
             (amount, account_id),
         )
         cursor.execute(
-            "INSERT INTO transactions (account_id, isDeposit, amount) VALUES(?, ?, ?)",
-            (account_id, 1, amount),
+            "INSERT INTO transactions (accountId, isDeposit, amount, isSuccessful) VALUES(?, ?, ?, ?)",
+            (account_id, 1, amount, 1),
         )
         is_transaction_successful = True
 
     else:
         cursor.execute(
-            "SELECT balance FROM accounts WHERE account_id == ?", (account_id,)
+            "SELECT balance FROM accounts WHERE accountId == ?", (account_id,)
         )
         retrieved_amount = cursor.fetchall()
         if retrieved_amount[0][0] > amount:
             cursor.execute(
-                "UPDATE accounts SET balance = balance - ? WHERE account_id == ?",
+                "UPDATE accounts SET balance = balance - ? WHERE accountId == ?",
                 (amount, account_id),
             )
             cursor.execute(
-                "INSERT INTO transactions (account_id, isDeposit, amount) VALUES(?, ?, ?)",
-                (account_id, 0, amount),
+                "INSERT INTO transactions (accountId, isDeposit, amount, isSuccessful) VALUES(?, ?, ?, ?)",
+                (account_id, 0, amount, 1),
             )
             is_transaction_successful = True
+        else:
+            cursor.execute(
+                "INSERT INTO transactions (accountId, isDeposit, amount, isSuccessful) VALUES(?, ?, ?, ?)",
+                (account_id, 0, amount, 0),
+            )
 
     connection.commit()
     connection.close()
     return is_transaction_successful
 
 
-@app.route("/bank/data/<int:accountId>", methods=["GET"])
-def extract_records(accountId):
+@app.route("/bank/data/<int:account_id>", methods=["GET"])
+def extract_records(account_id):
     if request.method == "GET":
         connection = sqlite3.connect("bank.db")
         cursor = connection.cursor()
 
         cursor.execute(
-            "SELECT * " "FROM accounts " "WHERE account_id == ?", (accountId,)
+            "SELECT * " "FROM accounts " "WHERE accountId == ?", (account_id,)
         )
         account = cursor.fetchall()
 
@@ -114,7 +118,7 @@ def extract_records(accountId):
             return json.dumps({"error": "Account not found"}), 404
 
         cursor.execute(
-            "SELECT * " "FROM transactions " "WHERE account_id == ?", (accountId,)
+            "SELECT * " "FROM transactions " "WHERE accountId == ?", (account_id,)
         )
         transactions_records = cursor.fetchall()
 
@@ -127,7 +131,8 @@ def extract_records(accountId):
                 "idTransakcji": record[0],
                 "idKonta": record[1],
                 "czyWplata": bool(record[2]),
-                "stanKonta": record[3],
+                "wartoscTransakcji": record[3],
+                "czyUdana": record[4],
             }
             for record in transactions_records
         ]
