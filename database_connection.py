@@ -8,6 +8,8 @@ app = Flask(__name__)
 def create_database():
     connection = sqlite3.connect("bank.db")
     cursor = connection.cursor()
+    cursor.execute("DROP TABLE transactions")
+    cursor.execute("DROP TABLE accounts")
     cursor.execute(
         """ CREATE TABLE transactions (
                     transaction_id INTEGER primary key,
@@ -34,10 +36,12 @@ def insert_test_records():
 
     cursor.execute("INSERT INTO accounts VALUES(0, 1000)")
     cursor.execute("INSERT INTO accounts VALUES (1, 1000)")
-    cursor.execute("INSERT INTO transactions VALUES (0, 0, 300, 0)")
-    cursor.execute("INSERT INTO transactions VALUES (2, 0, 300, 0)")
-    cursor.execute("INSERT INTO transactions VALUES (3, 0, 300, 0)")
-    cursor.execute("INSERT INTO transactions VALUES (1, 1, 350, 1)")
+    cursor.execute("INSERT INTO transactions VALUES (0, 0, 1, 1000)")
+    cursor.execute("INSERT INTO transactions VALUES (1, 0, 1, 2000)")
+    cursor.execute("INSERT INTO transactions VALUES (2, 0, 1, 2300)")
+    cursor.execute("UPDATE accounts SET balance = 6300 WHERE account_id == 0")
+    cursor.execute("INSERT INTO transactions VALUES (3, 1, 1, 1111)")
+    cursor.execute("UPDATE accounts SET balance = 2111 WHERE account_id == 1")
 
     connection.commit()
     connection.close()
@@ -63,16 +67,31 @@ def update_database(account_id, isDeposit, amount):
         create_new_account(account_id)
 
     if isDeposit:
-        cursor.execute("UPDATE accounts SET balance = balance + ? WHERE account_id == ?", (amount, account_id))
-        #TODO transaction
+        cursor.execute(
+            "UPDATE accounts SET balance = balance + ? WHERE account_id == ?",
+            (amount, account_id),
+        )
+        cursor.execute(
+            "INSERT INTO transactions (account_id, isDeposit, amount) VALUES(?, ?, ?)",
+            (account_id, 1, amount),
+        )
         is_transaction_successful = True
 
     else:
-        cursor.execute("SELECT balance FROM accounts WHERE account_id == ?", (account_id,))
+        cursor.execute(
+            "SELECT balance FROM accounts WHERE account_id == ?", (account_id,)
+        )
         retrieved_amount = cursor.fetchall()
         if retrieved_amount[0][0] > amount:
-            cursor.execute("UPDATE accounts SET balance = balance - ? WHERE account_id == ?", (amount, account_id))
-            # TODO transaction
+            cursor.execute(
+                "UPDATE accounts SET balance = balance - ? WHERE account_id == ?",
+                (amount, account_id),
+            )
+            cursor.execute(
+                "INSERT INTO transactions (account_id, isDeposit, amount) VALUES(?, ?, ?)",
+                (account_id, 0, amount),
+            )
+            is_transaction_successful = True
 
     connection.commit()
     connection.close()
@@ -114,13 +133,16 @@ def extract_records(accountId):
         ]
 
         response = jsonify({"account": account_dict, "transactions": transactions})
-        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
 
 if __name__ == "__main__":
     # create_database()
     # insert_test_records()
+    # print(update_database(0, True, 1000))
+    # print(update_database(0, False, 5300))
     # print(update_database(0, False, 1000))
+    # print(update_database(1, False, 20000))
+    # print(update_database(2, True, 1000000))
     app.run(debug=True)
-
