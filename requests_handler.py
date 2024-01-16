@@ -31,7 +31,7 @@ def handle_transaction_request(message):
     amount = data["amount"]
     if id is not None and amount is not None and is_deposit is not None:
         is_successful = update_database(id, is_deposit, amount)
-        response_data = json.dumps({"succes" : is_successful})
+        response_data = json.dumps({"success" : is_successful})
         response_topic = "bank/transaction_response"
         client.publish(response_topic, response_data)
 
