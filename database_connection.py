@@ -101,6 +101,23 @@ def update_database(account_id, is_deposit, amount):
     connection.close()
     return is_transaction_successful
 
+def account_balance(id):
+    connection = sqlite3.connect("bank.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT balance FROM accounts WHERE accountId == ?", (id,))
+    account = cursor.fetchone()
+    connection.close()
+    if(account is None):
+        return None
+    return account[0]
+
+def is_authorized(id):
+    connection = sqlite3.connect("bank.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT accountId FROM accounts WHERE accountId == ?", (id,))
+    account = cursor.fetchone()
+    connection.close()
+    return account is not None
 
 @app.route("/bank/data/<int:account_id>", methods=["GET"])
 def extract_records(account_id):
