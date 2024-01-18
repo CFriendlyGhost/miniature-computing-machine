@@ -1,9 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
 import lib.oled.SSD1331 as SSD1331
-import adafruit_bme280.advanced as adafruit_bme280
-import w1thermsensor
-import board
-import busio
 import time
 
 disp = SSD1331.SSD1331()
@@ -24,9 +20,11 @@ def main_menu(position):
     draw.text((0, 35), f"\tquit", font=fontSmall, fill="BLACK")
 
     # draw.text((0, position * 10 + 5), f" >", font=fontSmall, fill="BLACK")
-    draw.ellipse((1, position * 10 + 3, 5, position * 10 + 7), "GREEN")
+    draw.ellipse((1, position * 10 + 13, 5, position * 10 + 17), "GREEN")
 
     disp.ShowImage(image1, 0, 0)
+
+    time.sleep(0.1)
 
 
 def interaction_menu(message, value=None):
@@ -38,10 +36,12 @@ def interaction_menu(message, value=None):
     draw.text((0, 25), f"\t{message}", font=fontSmall, fill="BLACK")
     draw.text((0, 35), f"\tback", font=fontSmall, fill="BLACK")
     draw.text((50, 35), f"\tok", font=fontSmall, fill="BLACK")
-    draw.ellipse((1, 33, 5, 37), "RED")
-    draw.ellipse((51, 33, 55, 37), "GREEN")
+    draw.ellipse((1, 43, 5, 47), "RED")
+    draw.ellipse((51, 43, 55, 47), "GREEN")
 
     disp.ShowImage(image1, 0, 0)
+
+    time.sleep(0.1)
 
 
 def register_menu():
@@ -50,9 +50,11 @@ def register_menu():
 
     draw.text((0, 25), f"\tuse card to start", font=fontSmall, fill="BLACK")
     draw.text((0, 35), f"\toff", font=fontSmall, fill="BLACK")
-    draw.ellipse((1, 33, 5, 37), "RED")
+    draw.ellipse((1, 43, 5, 47), "RED")
 
     disp.ShowImage(image1, 0, 0)
+
+    time.sleep(0.1)
 
 
 def show_message(message):
@@ -60,3 +62,7 @@ def show_message(message):
     draw = ImageDraw.Draw(image1)
 
     draw.text((0, 25), f"\t{message}", font=fontSmall, fill="BLACK")
+
+    disp.ShowImage(image1, 0, 0)
+
+    time.sleep(0.1)

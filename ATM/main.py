@@ -35,8 +35,6 @@ buttons = {
 
 encoder_position = 0
 encoder_transfer = 0
-encoderLeftPreviousState = GPIO.input(encoderLeft)
-encoderRightPreviousState = GPIO.input(encoderRight)
 encoder_mode = None
 
 
@@ -81,7 +79,7 @@ def rfid_read():
 
 
 def handle_balance_response(message):
-    data["amount"] = json.loads(message.payload.decode())["amount"]
+    data["amount"] = json.loads(message.payload.decode())["value"]
 
 
 def handle_transaction_response(message):
@@ -129,30 +127,25 @@ def disconnect_from_broker():
 
 
 def turn_encoder(channel):
-    global encoderLeftPreviousState
-    global encoderRightPreviousState
 
-    encoder_left_current_state = GPIO.input(encoderLeft)
     encoder_right_current_state = GPIO.input(encoderRight)
 
     if encoder_mode == "menu position":
         global encoder_position
 
-        if encoderLeftPreviousState == 1 and encoder_left_current_state == 0 and encoder_position < 3:
-            encoder_position += 1
-        if encoderRightPreviousState == 1 and encoder_right_current_state == 0 and encoder_position > 0:
+        if encoder_right_current_state == 0 and encoder_position > 0:
             encoder_position -= 1
+        elif encoder_position < 3:
+            encoder_position += 1
 
     if encoder_mode == "transfer value":
         global encoder_transfer
 
-        if encoderLeftPreviousState == 1 and encoder_left_current_state == 0 and encoder_transfer < 10000:
-            encoder_transfer += 100
-        if encoderRightPreviousState == 1 and encoder_right_current_state == 0 and encoder_transfer > 0:
+        if encoder_right_current_state == 0 and encoder_transfer > 0:
             encoder_transfer -= 100
+        elif encoder_transfer < 1000:
+            encoder_transfer += 100
 
-    encoderLeftPreviousState = encoder_left_current_state
-    encoderRightPreviousState = encoder_right_current_state
 
 
 def register_loop():
@@ -259,8 +252,9 @@ def button_pressed_callback(color):
 
 
 def main():
-    GPIO.add_event_detect(buttonRed, GPIO.FALLING, callback={button_pressed_callback("red")}, bouncetime=200)
-    GPIO.add_event_detect(buttonGreen, GPIO.FALLING, callback={button_pressed_callback("green")}, bouncetime=200)
+    GPIO.add_event_detect(buttonRed, GPIO.FALLING, callback=lambda _: button_pressed_callback("red"), bouncetime=200)
+    GPIO.add_event_detect(buttonGreen, GPIO.FALLING, callback=lambda _: button_pressed_callback("green"), bouncetime=200)
+    GPIO.add_event_detect(encoderLeft, GPIO.FALLING, callback=turn_encoder, bouncetime=200)
 
     connect_to_broker()
 
@@ -270,4 +264,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        disp.clear()
+        disp.reset()
